@@ -52,7 +52,7 @@ void exibir_estado_global(int *estado, int gen, long populacao) {
 
 // Soma as celulas ativas apenas na regiao real do processo.
 // Ghost cells ficam de fora porque sao copias das bordas vizinhas
-// e seriam contadas em duplicata se incluidas.
+// e seriam contadas em duplicata se incluidas
 long somar_celulas_vivas(int *grade) {
     long total = 0;
 
@@ -64,12 +64,12 @@ long somar_celulas_vivas(int *grade) {
 }
 
 // Coleta os blocos reais de todos os processos, monta a matriz
-// global e a exibe no processo 0.
+// global e a exibe no processo 0
 
 // Cada processo extrai sua regiao real (sem ghost cells) para um
 // vetor auxiliar. MPI_Gather reunindo tudo no processo 0, que
 // reposiciona cada bloco conforme as coordenadas cartesianas do
-// processo correspondente.
+// processo correspondente
 void coletar_e_exibir(int *grade, int rank, MPI_Comm comm_cart,
                       int gen, long pop_total) {
     int *fatia_local = malloc(lin_reais * col_reais * sizeof(int));
@@ -123,7 +123,7 @@ void coletar_e_exibir(int *grade, int rank, MPI_Comm comm_cart,
 
 // Avanca uma geracao aplicando as quatro regras do Conway
 // exclusivamente nas celulas reais. As ghost cells garantem
-// que as bordas tenham vizinhanca correta sem condicionais extras.
+// que as bordas tenham vizinhanca correta sem condicionais extras
 //
 // Regras:
 //   Celula ativa com 2 ou 3 vizinhos: sobrevive
@@ -157,16 +157,15 @@ void aplicar_regras(int *grade, int *nova_grade) {
             grade[POS(i, j, col_local)] = nova_grade[POS(i, j, col_local)];
 }
 
-// Sincroniza as ghost cells com os 8 vizinhos do processo.
-//
+// Sincroniza as ghost cells com os 8 vizinhos do processo
 // Tres tipos derivados descrevem os padroes de memoria:
 //   tipo_faixa_h : BORDA linhas x col_reais elementos (stride col_local)
 //   tipo_faixa_v : lin_reais linhas x BORDA elementos (stride col_local)
 //   tipo_bloco   : BORDA x BORDA elementos (stride col_local)
-//
+
 // MPI_Sendrecv envia e recebe simultaneamente, evitando deadlock.
-// Vizinhos inexistentes recebem MPI_PROC_NULL; o MPI descarta esses
-// envios e recebimentos automaticamente.
+// Vizinhos inexistentes recebem MPI_PROC_NULL, o MPI descarta esses
+// envios e recebimentos automaticamente
 void trocar_ghost_cells(int *grade, MPI_Comm comm_cart,
                         int norte, int sul, int oeste, int leste,
                         int noroeste, int nordeste,
@@ -187,14 +186,14 @@ void trocar_ghost_cells(int *grade, MPI_Comm comm_cart,
 
     // troca de faixas horizontais (norte e sul)
 
-    // Envia faixa superior real para norte; recebe de sul no ghost inferior
+    // Envia faixa superior real para norte, recebe de sul no ghost inferior
     MPI_Sendrecv(
         &grade[POS(BORDA, BORDA, col_local)], 1, tipo_faixa_h, norte, 0,
         &grade[POS(BORDA + lin_reais, BORDA, col_local)], 1, tipo_faixa_h, sul, 0,
         comm_cart, MPI_STATUS_IGNORE
     );
 
-    // Envia faixa inferior real para sul; recebe de norte no ghost superior
+    // Envia faixa inferior real para sul, recebe de norte no ghost superior
     MPI_Sendrecv(
         &grade[POS(BORDA + lin_reais - BORDA, BORDA, col_local)], 1, tipo_faixa_h, sul, 1,
         &grade[POS(0, BORDA, col_local)], 1, tipo_faixa_h, norte, 1,
@@ -203,14 +202,14 @@ void trocar_ghost_cells(int *grade, MPI_Comm comm_cart,
 
     // troca de faixas verticais (oeste e leste)
 
-    // Envia faixa esquerda real para oeste; recebe de leste no ghost direito
+    // Envia faixa esquerda real para oeste, recebe de leste no ghost direito
     MPI_Sendrecv(
         &grade[POS(BORDA, BORDA, col_local)], 1, tipo_faixa_v, oeste, 2,
         &grade[POS(BORDA, BORDA + col_reais, col_local)], 1, tipo_faixa_v, leste, 2,
         comm_cart, MPI_STATUS_IGNORE
     );
 
-    // Envia faixa direita real para leste; recebe de oeste no ghost esquerdo
+    // Envia faixa direita real para leste, recebe de oeste no ghost esquerdo
     MPI_Sendrecv(
         &grade[POS(BORDA, BORDA + col_reais - BORDA, col_local)], 1, tipo_faixa_v, leste, 3,
         &grade[POS(BORDA, 0, col_local)], 1, tipo_faixa_v, oeste, 3,
@@ -219,28 +218,28 @@ void trocar_ghost_cells(int *grade, MPI_Comm comm_cart,
 
     // troca dos blocos de canto (diagonais)
 
-    // Canto superior esquerdo envia para noroeste; recebe sudeste no ghost inf-dir
+    // Canto superior esquerdo envia para noroeste, recebe sudeste no ghost inf-dir
     MPI_Sendrecv(
         &grade[POS(BORDA, BORDA, col_local)], 1, tipo_bloco, noroeste, 4,
         &grade[POS(BORDA + lin_reais, BORDA + col_reais, col_local)], 1, tipo_bloco, sudeste, 4,
         comm_cart, MPI_STATUS_IGNORE
     );
 
-    // Canto superior direito envia para nordeste; recebe sudoeste no ghost inf-esq
+    // Canto superior direito envia para nordeste, recebe sudoeste no ghost inf-esq
     MPI_Sendrecv(
         &grade[POS(BORDA, BORDA + col_reais - BORDA, col_local)], 1, tipo_bloco, nordeste, 5,
         &grade[POS(BORDA + lin_reais, 0, col_local)], 1, tipo_bloco, sudoeste, 5,
         comm_cart, MPI_STATUS_IGNORE
     );
 
-    // Canto inferior esquerdo envia para sudoeste; recebe nordeste no ghost sup-dir
+    // Canto inferior esquerdo envia para sudoeste, recebe nordeste no ghost sup-dir
     MPI_Sendrecv(
         &grade[POS(BORDA + lin_reais - BORDA, BORDA, col_local)], 1, tipo_bloco, sudoeste, 6,
         &grade[POS(0, BORDA + col_reais, col_local)], 1, tipo_bloco, nordeste, 6,
         comm_cart, MPI_STATUS_IGNORE
     );
 
-    // Canto inferior direito envia para sudeste; recebe noroeste no ghost sup-esq
+    // Canto inferior direito envia para sudeste, recebe noroeste no ghost sup-esq
     MPI_Sendrecv(
         &grade[POS(BORDA + lin_reais - BORDA, BORDA + col_reais - BORDA, col_local)], 1, tipo_bloco, sudeste, 7,
         &grade[POS(0, 0, col_local)], 1, tipo_bloco, noroeste, 7,
@@ -253,9 +252,9 @@ void trocar_ghost_cells(int *grade, MPI_Comm comm_cart,
     MPI_Type_free(&tipo_bloco);
 }
 
-// Reparte a matriz global entre os processos via MPI_Scatter.
-// O processo 0 empacota os blocos em ordem de rank cartesiano.
-// Cada processo copia o bloco recebido para sua area real local.
+// Reparte a matriz global entre os processos via MPI_Scatter
+// O processo 0 empacota os blocos em ordem de rank cartesiano
+// Cada processo copia o bloco recebido para sua area real local
 void repartir_dados(int *grade_global, int *grade_local,
                     int rank, MPI_Comm comm_cart) {
     int *buffer_total = NULL;
@@ -287,11 +286,9 @@ void repartir_dados(int *grade_global, int *grade_local,
     free(fatia);
 }
 
-// Configura o R-pentomino centralizado no grid como estado inicial.
+// Configura o R-pentomino centralizado no grid como estado inicial
 // O R-pentomino e um padrao de apenas 5 celulas que evolui por centenas
-// de geracoes antes de estabilizar, gerando grande variedade visual.
-// E completamente diferente do quadrado 3x3 usado na referencia.
-
+// de geracoes antes de estabilizar, gerando grande variedade visual
 // Formato do R-pentomino (. = inativa, O = ativa):
 //   .OO
 //   OO.
@@ -307,29 +304,6 @@ void configurar_padrao(int *grade_global) {
     grade_global[POS(c+1, c,   TAM_GLOBAL)] = ATIVA;
 }
 
-
-// Carrega o estado inicial a partir de um arquivo texto.
-// Linhas com '!' ou '#' sao tratadas como comentarios e ignoradas.
-// Celulas ativas: 'O', '1', '#' ou '*'. Qualquer outro caractere = inativa.
-void carregar_arquivo(const char *caminho, int *grade_global) {
-    FILE *arq = fopen(caminho, "r");
-    if (!arq) {
-        fprintf(stderr, "Nao foi possivel abrir: %s\n", caminho);
-        return;
-    }
-    char buf[8192];
-    int i = 0;
-    while (i < TAM_GLOBAL && fgets(buf, sizeof buf, arq)) {
-        if (buf[0] == '!' || buf[0] == '#') continue;
-        for (int j = 0; buf[j] && buf[j] != '\n' && j < TAM_GLOBAL; j++) {
-            char c = buf[j];
-            grade_global[POS(i, j, TAM_GLOBAL)] =
-                (c == 'O' || c == '1' || c == '#' || c == '*') ? ATIVA : INATIVA;
-        }
-        i++;
-    }
-    fclose(arq);
-}
 
 int main(int argc, char **argv) {
     // Inicializa o ambiente MPI
@@ -349,24 +323,23 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // Leitura dos argumentos: geracoes e/ou arquivo de entrada
+    // Leitura dos argumentos gerações
     int num_geracoes = MAX_GERACOES;
-    const char *nome_arquivo = NULL;
     for (int i = 1; i < argc; i++) {
         int v = atoi(argv[i]);
-        if (v > 0) num_geracoes = v; else nome_arquivo = argv[i];
+        if (v > 0) num_geracoes = v;
     }
 
     //Topologia cartesiana
 
-    // MPI_Dims_create distribui os processos nas dimensoes da grade.
-    // Para 16 processos resulta em DIMS = {4, 4}.
+    // MPI_Dims_create distribui os processos nas dimensoes da grade
+    // Para 16 processos resulta em DIMS = {4, 4}
 
-    // MPI_Cart_create cria o comunicador com layout 2D.
-    // periodico={0,0}: grade nao-periodica, bordas nao se fecham.
+    // MPI_Cart_create cria o comunicador com layout 2D
+    // periodico={0,0}: grade nao-periodica, bordas nao se fecham
 
     // MPI_Cart_shift localiza os vizinhos diretos em cada dimensao
-    // sem necessidade de calcular os ranks manualmente.
+    // sem necessidade de calcular os ranks manualmente
     DIMS[0] = DIMS[1] = 0;
     MPI_Dims_create(TOTAL_PROCS, 2, DIMS);
 
@@ -385,9 +358,9 @@ int main(int argc, char **argv) {
     MPI_Cart_shift(comm_cart, 0, 1, &norte, &sul);
     MPI_Cart_shift(comm_cart, 1, 1, &oeste, &leste);
 
-    // Vizinhos diagonais via MPI_Cart_rank.
-    // MPI_PROC_NULL marca ausencia de vizinho nas bordas da grade;
-    // o MPI descarta automaticamente comunicacoes com esse valor.
+    // Vizinhos diagonais via MPI_Cart_rank
+    // MPI_PROC_NULL marca ausencia de vizinho nas bordas da grade
+    // o MPI descarta automaticamente comunicacoes com esse valor
     int noroeste = MPI_PROC_NULL, nordeste  = MPI_PROC_NULL;
     int sudoeste = MPI_PROC_NULL, sudeste   = MPI_PROC_NULL;
 
@@ -410,8 +383,8 @@ int main(int argc, char **argv) {
         MPI_Cart_rank(comm_cart, coord_viz, &sudeste);
 
     // Dimensoes do bloco de cada processo:
-    // TAM_GLOBAL / GRADE_LADO = 160 / 4 = 40 celulas reais por lado.
-    // A area local inclui as ghost cells ao redor da regiao real.
+    // TAM_GLOBAL / GRADE_LADO = 160 / 4 = 40 celulas reais por lado
+    // A area local inclui as ghost cells ao redor da regiao real
     lin_reais = TAM_GLOBAL / DIMS[0];
     col_reais = TAM_GLOBAL / DIMS[1];
     lin_local = lin_reais + 2 * BORDA;
@@ -437,8 +410,7 @@ int main(int argc, char **argv) {
     int *grade_global = NULL;
     if (rank == 0) {
         grade_global = calloc(TAM_GLOBAL * TAM_GLOBAL, sizeof(int));
-        if (nome_arquivo) carregar_arquivo(nome_arquivo, grade_global);
-        else              configurar_padrao(grade_global);
+        configurar_padrao(grade_global);
     }
     repartir_dados(grade_global, grade, rank, comm_cart);
     if (rank == 0) free(grade_global);
@@ -446,15 +418,15 @@ int main(int argc, char **argv) {
     double tempo_ini = MPI_Wtime();
     long pop_inicio = 0, pop_fim = 0;
 
-    // Loop principal: geracao 0 e o estado inicial; o programa
+    // Loop principal: geracao 0 e o estado inicial, o programa
     // alterna entre trocar ghost cells e calcular a proxima geracao
-    // ate atingir num_geracoes.
+    // ate atingir num_geracoes
     for (int gen = 0; gen <= num_geracoes; gen++) {
 
         // Comunicacao coletiva: MPI_Reduce
-        // Cada processo calcula sua soma local de celulas ativas.
-        // MPI_Reduce agrega todos os valores no processo 0 usando MPI_SUM.
-        // Ghost cells sao excluidas para evitar dupla contagem.
+        // Cada processo calcula sua soma local de celulas ativas
+        // MPI_Reduce agrega todos os valores no processo 0 usando MPI_SUM
+        // Ghost cells sao excluidas para evitar dupla contagem
         long vivos_locais = somar_celulas_vivas(grade);
         long vivos_total  = 0;
         MPI_Reduce(&vivos_locais, &vivos_total, 1, MPI_LONG, MPI_SUM, 0, comm_cart);
